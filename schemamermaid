@@ -1,0 +1,106 @@
+classDiagram
+    Hotel_typ <|-- OfertyWakacyjne_typ
+    Kategorie_typ <|-- OfertyWakacyjne_typ
+    OfertyWakacyjne_typ <|-- Rezerwacja_typ
+    Uzytkownik_typ <|-- Rezerwacja_typ
+    Hotel_typ <|-- OcenaHoteli_typ
+    Uzytkownik_typ <|-- OcenaHoteli_typ
+    Adresy_typ <|-- Hotel_typ
+    Ocena_typ <|-- OcenaHoteli_typ
+    OfertyWakacyjne_typ <|-- Promotions_typ
+    ListaAtrakcje_typ <|-- OfertyWakacyjne_typ
+
+    class Adresy_typ {
+        +Number adresID
+        +String ulica
+        +String nr_domu
+        +String nr_mieszkania
+        +String kod_pocztowy
+        +String miasto
+        +String kraj
+    }
+
+    class Hotel_typ {
+        +Number hotelID
+        +String nazwa
+        +String lokalizacja
+        +String kraj
+        +String region
+        +CLOB opisLong
+        +Number dla_doroslych
+        +Adresy_typ adres
+    }
+
+    class Kategorie_typ {
+        +Number catId
+        +String name
+        +CLOB opis
+        +Number allIn
+        +Number wakacjeZDziecmi
+        +Number lastMinute
+    }
+
+    class ListaAtrakcje_typ {
+        %% Reprezentuje kolekcję Atrakcja_typ (NESTED TABLE)
+        %% Zależnie od potrzeb, można dodać definicję Atrakcja_typ.
+    }
+
+    class Atrakcja_typ {
+        +Number atrakcjaID
+        +String nazwa
+        +CLOB opis_atrakcji
+    }
+
+    class OfertyWakacyjne_typ {
+        +Number packID
+        +REF Kategorie_typ ref_cat
+        +REF Hotel_typ ref_hotel
+        +Date startDate
+        +Date endDate
+        +Number price
+        +Number original_price
+        +String opis_pakietu
+        +Number avalibitystatus
+        +Number duration
+        +ListaAtrakcje_typ atrakcje
+    }
+
+    class Promotions_typ {
+        +Number promoId
+        +REF OfertyWakacyjne_typ ref_package
+        +String promoName
+        +String promoDesc
+        +Number discount
+        +Date startDate
+        +Date endDate
+    }
+
+    class Uzytkownik_typ {
+        +Number uzytkownik_id
+        +String imie
+        +String nazwisko
+        +String email
+        +String telefon
+        +String typ_uzytkownika
+        +Date data_urodzenia
+    }
+
+    class Ocena_typ {
+        +Number wartosc
+        +String komentarz
+        +Date data
+    }
+
+    class OcenaHoteli_typ {
+        +Number ocena_id
+        +REF Uzytkownik_typ ref_uzytkownik
+        +REF Hotel_typ ref_hotel
+        +Ocena_typ ocena
+    }
+
+    class Rezerwacja_typ {
+        +Number rezerwacja_id
+        +REF Uzytkownik_typ ref_uzytkownik
+        +REF OfertyWakacyjne_typ ref_oferta
+        +Date data_rezerwacji
+    }
