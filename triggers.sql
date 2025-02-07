@@ -1,4 +1,3 @@
---TRIGGER SPRAWDZAJï¿½CY POPRAWNOï¿½ï¿½ WYSTAWIANIA OCENY PRZEZ Uï¿½YTKOWNIKA
 CREATE OR REPLACE TRIGGER trg_check_ocena_hoteli
 BEFORE INSERT OR UPDATE ON OcenyHoteli_tab
 FOR EACH ROW
@@ -14,7 +13,7 @@ BEGIN
       AND o.endDate < SYSDATE;
       
     IF v_count = 0 THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Uï¿½ytkownik musi mieï¿½ zakoï¿½czonï¿½ rezerwacjï¿½ na ten hotel, aby wystawiï¿½ ocenï¿½.');
+        RAISE_APPLICATION_ERROR(-20001, 'U¿ytkownik musi mieæ zakoñczon¹ rezerwacjê na ten hotel, aby wystawiæ ocenê.');
     END IF;
 END;
 /
@@ -36,17 +35,17 @@ BEGIN
     v_new_price := v_offer.original_price * (1 - :NEW.discount/100);
     
     DBMS_OUTPUT.PUT_LINE('Oryginalna cena: ' || v_offer.original_price);
-    DBMS_OUTPUT.PUT_LINE('ZniÅ¼ka: ' || :NEW.discount || '%');
+    DBMS_OUTPUT.PUT_LINE('Zni¿ka: ' || :NEW.discount || '%');
     DBMS_OUTPUT.PUT_LINE('Nowa cena: ' || v_new_price);
     
     UPDATE OfertyWakacyjne_tab o
     SET o.price = v_new_price
     WHERE o.packID = v_offer.packID;
 
-    DBMS_OUTPUT.PUT_LINE('Aktualizacja zakoÅ„czona');
+    DBMS_OUTPUT.PUT_LINE('Aktualizacja zakoñczona');
 EXCEPTION
     WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('BÅ‚Ä…d w triggerze: ' || SQLERRM);
+        DBMS_OUTPUT.PUT_LINE('B³¹d w wyzwalaczu: ' || SQLERRM);
         RAISE;
 END;
 /
@@ -68,10 +67,10 @@ BEGIN
     SET o.price = o.original_price
     WHERE o.packID = v_offer.packID;
     
-    DBMS_OUTPUT.PUT_LINE('PrzywrÃ³cono oryginalnÄ… cenÄ™: ' || v_offer.original_price);
+    DBMS_OUTPUT.PUT_LINE('Przywrócono oryginaln¹ cenê: ' || v_offer.original_price);
 EXCEPTION
     WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('BÅ‚Ä…d w triggerze przywracania ceny: ' || SQLERRM);
+        DBMS_OUTPUT.PUT_LINE('B³¹d w wyzwalaczu przywracania ceny: ' || SQLERRM);
         RAISE;
 END;
 /
@@ -112,7 +111,7 @@ BEGIN
     );
     
     IF v_count > 0 THEN
-        RAISE_APPLICATION_ERROR(-20002, 'UÅ¼ytkownik ma juÅ¼ rezerwacjÄ™ w tym terminie');
+        RAISE_APPLICATION_ERROR(-20002, 'U¿ytkownik ma ju¿ rezerwacjê w tym terminie');
     END IF;
 END;
 /
@@ -120,7 +119,63 @@ END;
 ---------------------------------------------------------------------------------------------------------
 
 
+CREATE SEQUENCE seq_rezerwacja_id
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
+/
 
+
+CREATE OR REPLACE TRIGGER trg_rezerwacja_id_gen
+BEFORE INSERT ON Rezerwacje_tab
+FOR EACH ROW
+BEGIN
+    IF :NEW.rezerwacja_id IS NULL THEN
+        SELECT seq_rezerwacja_id.NEXTVAL 
+        INTO :NEW.rezerwacja_id 
+        FROM dual;
+    END IF;
+END;
+/
+---------------------------------------------------------------------------------------------------------
+
+CREATE OR REPLACE TRIGGER trg_set_reservation_price
+BEFORE INSERT ON Rezerwacje_tab
+FOR EACH ROW
+DECLARE
+    v_current_price NUMBER;
+BEGIN
+    SELECT o.price INTO v_current_price
+    FROM OfertyWakacyjne_tab o
+    WHERE REF(o) = :NEW.ref_oferta;
+
+    :NEW.cena_rezerwacji := v_current_price;
+END;
+/
 
 
 commit;
+---------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER limit_miejsc
+BEFORE INSERT ON Rezerwacje_tab
+FOR EACH ROW
+DECLARE
+    v_limit NUMBER;
+    v_count NUMBER;
+BEGIN
+    SELECT t.max_capacity
+      INTO v_limit
+      FROM OfertyWakacyjne_tab t
+     WHERE REF(t) = :NEW.ref_oferta
+       FOR UPDATE;
+    SELECT COUNT(*)
+      INTO v_count
+      FROM Rezerwacje_tab r
+     WHERE r.ref_oferta = :NEW.ref_oferta;
+
+    IF v_count >= v_limit THEN
+        RAISE_APPLICATION_ERROR(-20000, 'Przekroczony limit miejsc dla tej oferty!');
+    END IF;
+END;
+/

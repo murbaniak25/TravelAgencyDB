@@ -89,7 +89,7 @@ WHERE o.packID = 1;
 
 INSERT INTO Promocje_tab VALUES (
     Promotions_typ(
-        3,
+        6,
         (SELECT REF(o) FROM OfertyWakacyjne_tab o WHERE o.packID = 1),
         'Test Promotion',
         'Test Description',
@@ -106,8 +106,10 @@ WHERE o.packID = 1;
 
 
 UPDATE OfertyWakacyjne_tab
-SET price = price * 0.9
-WHERE packID = 1;
+SET price = price * 0.8
+WHERE packID = 5;
+
+select * from V_HOTEL_SALES_STATS;
 
 ---------------------------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW v_hotel_sales_stats AS
@@ -116,11 +118,25 @@ SELECT
     h.nazwa as hotel_name,
     h.kraj as country,
     COUNT(r.rezerwacja_id) as total_reservations,
-    SUM(o.price) as total_revenue,
-    AVG(o.price) as avg_reservation_price,
-    MIN(o.price) as min_price,
-    MAX(o.price) as max_price,
-    COUNT(CASE WHEN o.startDate - r.data_rezerwacji <= 7 THEN 1 END) as last_minute_bookings
+    SUM(CASE 
+        WHEN r.rezerwacja_id IS NOT NULL THEN r.cena_rezerwacji
+        ELSE o.original_price
+    END) as total_revenue,
+    AVG(CASE 
+        WHEN r.rezerwacja_id IS NOT NULL THEN r.cena_rezerwacji
+        ELSE o.original_price
+    END) as avg_reservation_price,
+    MIN(CASE 
+        WHEN r.rezerwacja_id IS NOT NULL THEN r.cena_rezerwacji
+        ELSE o.original_price
+    END) as min_price,
+    MAX(CASE 
+        WHEN r.rezerwacja_id IS NOT NULL THEN r.cena_rezerwacji
+        ELSE o.original_price
+    END) as max_price,
+    COUNT(CASE 
+        WHEN o.startDate - r.data_rezerwacji <= 7 THEN 1 
+    END) as last_minute_bookings
 FROM 
     Hotele_tab h
     LEFT JOIN OfertyWakacyjne_tab o ON REF(h) = o.ref_hotel
@@ -129,6 +145,7 @@ GROUP BY
     h.hotelID, h.nazwa, h.kraj
 ORDER BY 
     total_revenue DESC NULLS LAST;
+/
 
 ---------------------------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW v_user_activity AS
@@ -175,8 +192,8 @@ SELECT
     k.allIn as all_inclusive,
     r.data_rezerwacji,
     CASE 
-        WHEN o.startDate > SYSDATE THEN 'NadchodzÄ…ca'
-        WHEN o.endDate < SYSDATE THEN 'ZakoÅ„czona'
+        WHEN o.startDate > SYSDATE THEN 'Nadchodz¹ca'
+        WHEN o.endDate < SYSDATE THEN 'Zakoñczona'
         ELSE 'W trakcie'
     END as status_rezerwacji
 FROM 
@@ -229,7 +246,6 @@ SELECT
     k.name as kategoria,
     k.allIn as all_inclusive,
     k.wakacjeZDziecmi as dla_rodzin,
-    o.avalibitystatus as dostepnosc,
     ROUND(o.startDate - SYSDATE) as dni_do_wyjazdu
 FROM 
     OfertyWakacyjne_tab o,
@@ -238,7 +254,6 @@ FROM
 WHERE 
     REF(h) = o.ref_hotel
     AND REF(k) = o.ref_cat
-    AND o.avalibitystatus = 1
     AND o.startDate > SYSDATE
 ORDER BY 
     o.startDate;
@@ -247,132 +262,147 @@ ORDER BY
 ---------------------------------------------------------------------------------------------------------
 
 SELECT * FROM v_reservation_details 
-WHERE uzytkownik_id = 3;
+WHERE uzytkownik_id = 1;
 
-SELECT * FROM v_user_reservations_summary;
+SELECT * FROM UZytkownicy_tab;
 
+-----------------------------WIDOK POMOCNICZY---------------------------------------------------------
+
+
+SELECT 
+    r.rezerwacja_id,
+    u.uzytkownik_id,
+    u.imie || ' ' || u.nazwisko as klient,
+    o.startDate as data_rozpoczecia,
+    o.endDate as data_zakonczenia
+FROM 
+    Rezerwacje_tab r,
+    Uzytkownicy_tab u,
+    OfertyWakacyjne_tab o
+WHERE 
+    REF(u) = r.ref_uzytkownik
+    AND REF(o) = r.ref_oferta
+ORDER BY 
+    o.startDate;
+
+------------------ WIDOK POMOCNICZY--------------------------------------------------------------------
+
+SELECT 
+    o.packID,
+    h.nazwa as hotel,
+    o.startDate,
+    o.endDate,
+    o.price,
+    CASE 
+        WHEN EXISTS (
+            SELECT 1 
+            FROM Rezerwacje_tab r2, OfertyWakacyjne_tab o2
+            WHERE REF(o2) = r2.ref_oferta
+            AND r2.ref_uzytkownik = (SELECT REF(u) FROM Uzytkownicy_tab u WHERE u.uzytkownik_id = 3)
+            AND (
+                (o.startDate BETWEEN o2.startDate AND o2.endDate) OR
+                (o.endDate BETWEEN o2.startDate AND o2.endDate)
+            )
+        ) THEN 'KONFLIKT'
+        ELSE 'DOSTÊPNA'
+    END as status
+FROM 
+    OfertyWakacyjne_tab o,
+    Hotele_tab h
+WHERE 
+    REF(h) = o.ref_hotel
+    AND o.startDate >= SYSDATE
+ORDER BY 
+    o.startDate;
+    
+    
+-------------------------------WIDOK POMOCNICZY-------------------------------------------------------
+SELECT 
+    o.packID,
+    h.nazwa as hotel_name,
+    o.startDate as data_rozpoczecia,
+    o.endDate as data_zakonczenia,
+    o.price as cena
+FROM 
+    OfertyWakacyjne_tab o,
+    Hotele_tab h
+WHERE 
+    REF(h) = o.ref_hotel
+    AND o.startDate >= SYSDATE
+ORDER BY 
+    o.startDate;
+
+
+--------------------------------------------------------------------------------------
 DECLARE
     v_status VARCHAR2(100);
 BEGIN
     pkg_reservation_management.create_reservation(
-        p_user_id => 5,
-        p_package_id => 3,
+        p_user_id => 1,
+        p_package_id => 5,
         p_status => v_status
     );
-    DBMS_OUTPUT.PUT_LINE('Status rezerwacji: ' || v_status);
+    
+    IF v_status = 'SUCCESS' THEN
+        DBMS_OUTPUT.PUT_LINE('Rezerwacja zakoñczy³a siê powodzeniem: ' || v_status);
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('Rezerwacja NIE powiod³a siê: ' || v_status);
+    END IF;
 END;
 /
-
-
+-------------------------------------------------------------------------------
+-- 2. Sprawdzenie dostêpnoœci oferty 
+-------------------------------------------------------------------------------
+DECLARE
+    v_is_available BOOLEAN;
 BEGIN
-    pkg_reservation_management.generate_user_reservations_report(3);
+    v_is_available := pkg_reservation_management.check_availability(
+        p_package_id => 5,
+        p_start_date => SYSDATE
+    );
+
+    IF v_is_available THEN
+        DBMS_OUTPUT.PUT_LINE('Oferta jest DOSTÊPNA dziœ.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('Oferta jest ju¿ NIEDOSTÊPNA.');
+    END IF;
 END;
 /
-
+-------------------------------------------------------------------------------
+-- 3. Anulowanie rezerwacji
+-------------------------------------------------------------------------------
 DECLARE
     v_status VARCHAR2(100);
 BEGIN
     pkg_reservation_management.cancel_reservation(
-        p_reservation_id => 2,
+        p_reservation_id => 100,
         p_status => v_status
     );
-    DBMS_OUTPUT.PUT_LINE('Status anulowania: ' || v_status);
-END;
-/
-DECLARE
-    v_status VARCHAR2(100);
-BEGIN
-    pkg_reservation_management.create_reservation(
-        p_user_id => 1,
-        p_package_id => 2,
-        p_reservation_date => SYSDATE,
-        p_status => v_status
-    );
-    DBMS_OUTPUT.PUT_LINE('Status rezerwacji: ' || v_status);
-END;
-/
--- PrzykÅ‚ad prÃ³by utworzenia rezerwacji dla niedostÄ™pnej oferty
-DECLARE
-    v_status VARCHAR2(100);
-BEGIN
-    pkg_reservation_management.create_reservation(
-        p_user_id => 1,
-        p_package_id => 999,
-        p_status => v_status
-    );
-    DBMS_OUTPUT.PUT_LINE('Status rezerwacji: ' || v_status);
+    DBMS_OUTPUT.PUT_LINE('Rezultat: ' || v_status);
 END;
 /
 
-DECLARE
-    v_is_available BOOLEAN;
-BEGIN
-    v_is_available := pkg_reservation_management.check_availability(
-        p_package_id => 2,
-        p_start_date => TO_DATE('2024-07-15', 'YYYY-MM-DD')
-    );
-    
-    IF v_is_available THEN
-        DBMS_OUTPUT.PUT_LINE('Oferta jest dostÄ™pna');
-    ELSE
-        DBMS_OUTPUT.PUT_LINE('Oferta nie jest dostÄ™pna');
-    END IF;
-END;
-/
-
-
-
+-------------------------------------------------------------------------------
+-- 4. Generowanie raportu dla u¿ytkownika
+-------------------------------------------------------------------------------
 BEGIN
     pkg_reservation_management.generate_user_reservations_report(
-        p_user_id => 1 
+        p_user_id => 2
     );
 END;
 /
 
+--------------------------------------------------------------------------------
+CREATE OR REPLACE VIEW v_oferty_wakacyjne_short AS
+SELECT
+    o.packID          AS pack_id,
+    DEREF(o.ref_cat).catId     AS cat_id,
+    DEREF(o.ref_hotel).hotelID AS hotel_id,
+    o.startDate       AS start_date,
+    o.endDate         AS end_date,
+    o.price           AS price,
+    o.duration        AS duration,
+    o.max_capacity    AS max_capacity
+FROM OfertyWakacyjne_tab o;
 
-
-DECLARE
-    v_status VARCHAR2(100);
-    v_is_available BOOLEAN;
-    v_user_id NUMBER := 1;
-    v_package_id NUMBER := 2;
-BEGIN
-    v_is_available := pkg_reservation_management.check_availability(
-        p_package_id => v_package_id,
-        p_start_date => SYSDATE
-    );
-    
-    IF v_is_available THEN
-        pkg_reservation_management.create_reservation(
-            p_user_id => v_user_id,
-            p_package_id => v_package_id,
-            p_status => v_status
-        );
-        
-        IF v_status = 'SUCCESS' THEN
-            pkg_reservation_management.generate_user_reservations_report(
-                p_user_id => v_user_id
-            );
-        ELSE
-            DBMS_OUTPUT.PUT_LINE('BÅ‚Ä…d podczas tworzenia rezerwacji: ' || v_status);
-        END IF;
-    ELSE
-        DBMS_OUTPUT.PUT_LINE('Oferta nie jest dostÄ™pna');
-    END IF;
-END;
-/
-
-
-DECLARE
-    v_status VARCHAR2(100);
-BEGIN
-    pkg_reservation_management.create_reservation(
-        p_user_id => 3,
-        p_package_id => 1,  
-        p_reservation_date => TO_DATE('2024-06-01', 'YYYY-MM-DD'),
-        p_status => v_status
-    );
-    DBMS_OUTPUT.PUT_LINE('Status rezerwacji: ' || v_status);
-END;
-/
-
+select * from v_oferty_wakacyjne_short

@@ -11,7 +11,6 @@ CREATE OR REPLACE TYPE Adresy_typ AS OBJECT (
     kraj          VARCHAR2(100)
 );
 /
-
 ------------------------------------------------------------------------
 -- OCENA_TYP 
 ------------------------------------------------------------------------
@@ -98,10 +97,11 @@ CREATE OR REPLACE TYPE OfertyWakacyjne_typ AS OBJECT (
   price            NUMBER(10,2),
   original_price   NUMBER(10,2),
   opis_pakietu     VARCHAR2(2000),
-  avalibitystatus  NUMBER(1),
   duration         NUMBER(5,2),
-  atrakcje         ListaAtrakcje_typ
+  atrakcje         ListaAtrakcje_typ,
+  max_capacity     NUMBER
 );
+/
 ------------------------------------------------------------------------
 -- PROMOTIONS_TYP 
 ------------------------------------------------------------------------
@@ -121,10 +121,10 @@ CREATE OR REPLACE TYPE Promotions_typ AS OBJECT (
 ------------------------------------------------------------------------
 
 CREATE OR REPLACE TYPE Rezerwacja_typ AS OBJECT (
-  rezerwacja_id    NUMBER,
-  ref_uzytkownik   REF Uzytkownik_typ,
-  ref_oferta       REF OfertyWakacyjne_typ,
-  data_rezerwacji  DATE
+    rezerwacja_id    NUMBER,
+    ref_uzytkownik   REF Uzytkownik_typ,
+    ref_oferta       REF OfertyWakacyjne_typ,
+    data_rezerwacji  DATE,
+    cena_rezerwacji  NUMBER  
 );
 /
-
