@@ -1,5 +1,4 @@
 BEGIN
-    -- Usuni�cie tabel zagnie�d�onych najpierw
     EXECUTE IMMEDIATE 'DROP TABLE OfertyWakacyjne_tab CASCADE CONSTRAINTS';
     EXECUTE IMMEDIATE 'DROP TABLE OcenyHoteli_tab CASCADE CONSTRAINTS';
     EXECUTE IMMEDIATE 'DROP TABLE Promocje_tab CASCADE CONSTRAINTS';

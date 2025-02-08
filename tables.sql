@@ -1,6 +1,3 @@
-------------------------------------------------------------------------
--- Tworzenie tabel na podstawie typ�w obiektowych
-------------------------------------------------------------------------
 -- Tabela dla typu Hotel_typ
 CREATE TABLE Hotele_tab OF Hotel_typ
 (
