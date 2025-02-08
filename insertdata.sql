@@ -262,6 +262,25 @@ INSERT INTO OfertyWakacyjne_tab VALUES (
         2 -- maksymalna liczba rezerwacji
     )
 );
+INSERT INTO OfertyWakacyjne_tab VALUES (
+    OfertyWakacyjne_typ(
+        7, -- packID
+        (SELECT REF(k) FROM Kategorie_tab k WHERE k.catId = 3), -- ref_cat
+        (SELECT REF(h) FROM Hotele_tab h WHERE h.hotelID = 5), -- ref_hotel
+        TO_DATE('2025-09-02', 'YYYY-MM-DD'), -- startDate
+        TO_DATE('2025-09-06', 'YYYY-MM-DD'), -- endDate
+        2200.00, -- price
+        2200.00, -- original_price
+        'Odkryj historiê Berlina podczas tej wyj¹tkowej wycieczki.', -- opis_pakietu
+        6,  -- duration
+        ListaAtrakcje_typ(
+            Atrakcja_typ(13, 'Brama Brandenburska', 'OdwiedŸ jedn¹ z najbardziej znanych ikon Berlina.'),
+            Atrakcja_typ(14, 'Zwiedzanie Muru Berliñskiego', 'Poznaj historiê podzielonego miasta.'),
+            Atrakcja_typ(15, 'Wycieczka do Reichstagu', 'Odkryj serce niemieckiej polityki.')
+        ),
+        30 -- max_capacity
+    )
+);
 --PROMOCJE
 -- Promocja 1: Summer Special
 INSERT INTO Promocje_tab VALUES (

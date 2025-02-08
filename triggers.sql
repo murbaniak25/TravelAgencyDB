@@ -91,27 +91,27 @@ CREATE OR REPLACE TRIGGER trg_check_reservation_conflict
 BEFORE INSERT ON Rezerwacje_tab
 FOR EACH ROW
 DECLARE
-    v_count NUMBER;
+    v_count      NUMBER;
     v_start_date DATE;
-    v_end_date DATE;
-    v_user_id NUMBER;
+    v_end_date   DATE;
 BEGIN
     SELECT o.startDate, o.endDate
-    INTO v_start_date, v_end_date
-    FROM OfertyWakacyjne_tab o
-    WHERE REF(o) = :NEW.ref_oferta;
+      INTO v_start_date, v_end_date
+      FROM OfertyWakacyjne_tab o
+     WHERE REF(o) = :NEW.ref_oferta;
+
     SELECT COUNT(*)
-    INTO v_count
-    FROM Rezerwacje_tab r, OfertyWakacyjne_tab o
-    WHERE r.ref_uzytkownik = :NEW.ref_uzytkownik
-    AND r.ref_oferta = REF(o)
-    AND (
-        (v_start_date BETWEEN o.startDate AND o.endDate) OR
-        (v_end_date BETWEEN o.startDate AND o.endDate)
-    );
-    
+      INTO v_count
+      FROM Rezerwacje_tab r
+      JOIN OfertyWakacyjne_tab o ON r.ref_oferta = REF(o)
+     WHERE r.ref_uzytkownik = :NEW.ref_uzytkownik
+       AND (
+           (v_start_date BETWEEN o.startDate AND o.endDate)
+        OR (v_end_date   BETWEEN o.startDate AND o.endDate)
+       );
+
     IF v_count > 0 THEN
-        RAISE_APPLICATION_ERROR(-20002, 'U¿ytkownik ma ju¿ rezerwacjê w tym terminie');
+        RAISE_APPLICATION_ERROR(-20006, 'U¿ytkownik ma ju¿ rezerwacjê w tym terminie');
     END IF;
 END;
 /

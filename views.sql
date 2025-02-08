@@ -272,6 +272,7 @@ SELECT * FROM UZytkownicy_tab;
 SELECT 
     r.rezerwacja_id,
     u.uzytkownik_id,
+    o.packid as oferta_id,
     u.imie || ' ' || u.nazwisko as klient,
     o.startDate as data_rozpoczecia,
     o.endDate as data_zakonczenia
@@ -331,15 +332,13 @@ WHERE
     AND o.startDate >= SYSDATE
 ORDER BY 
     o.startDate;
-
-
 --------------------------------------------------------------------------------------
 DECLARE
     v_status VARCHAR2(100);
 BEGIN
     pkg_reservation_management.create_reservation(
         p_user_id => 1,
-        p_package_id => 5,
+        p_package_id => 1,
         p_status => v_status
     );
     
@@ -357,7 +356,7 @@ DECLARE
     v_is_available BOOLEAN;
 BEGIN
     v_is_available := pkg_reservation_management.check_availability(
-        p_package_id => 5,
+        p_package_id => 1,
         p_start_date => SYSDATE
     );
 
@@ -375,7 +374,7 @@ DECLARE
     v_status VARCHAR2(100);
 BEGIN
     pkg_reservation_management.cancel_reservation(
-        p_reservation_id => 100,
+        p_reservation_id => 28,
         p_status => v_status
     );
     DBMS_OUTPUT.PUT_LINE('Rezultat: ' || v_status);
@@ -387,7 +386,7 @@ END;
 -------------------------------------------------------------------------------
 BEGIN
     pkg_reservation_management.generate_user_reservations_report(
-        p_user_id => 2
+        p_user_id => 1
     );
 END;
 /
@@ -404,5 +403,3 @@ SELECT
     o.duration        AS duration,
     o.max_capacity    AS max_capacity
 FROM OfertyWakacyjne_tab o;
-
-select * from v_oferty_wakacyjne_short
